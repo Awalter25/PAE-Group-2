@@ -1,0 +1,258 @@
+
+library(vegan)
+library(ggplot2)
+
+readRDS("Rarefied_PAE_Dataset.RDS")
+PAE_data = readRDS("Rarefied_PAE_Dataset.RDS")
+
+#DEPHYLOSEQ
+metadata = as.data.frame(as.matrix(PAE_data@sam_data))
+otu = as.data.frame(t(as.matrix(PAE_data@otu_table)))
+
+otu_table1 <- otu_table(otu, taxa_are_rows = FALSE)
+View(otu_table1)
+
+# merge the metadata and otu table together
+metaasv = merge(metadata, otu, by=0)
+
+View(metaasv)
+View(metadata)
+
+
+###
+Day8_only_asv <- subset(metaasv, Age=="P8")
+Day22_only_asv <- subset(metaasv, Age=="P22")
+Day38_only_asv <- subset(metaasv, Age=="P38")
+
+#Day 8 Only
+
+PAE_Day8 <- Day8_only_asv[,-ncol(Day8_only_asv)]
+PAE_meta_col <-c(1,2,3,4,5,6,7)
+PAE_otu_col <-8:172 
+view(PAE_otu_col)
+
+#Day 22
+
+PAE_Day22 <- Day22_only_asv[,-ncol(Day22_only_asv)]
+PAE_meta_col <-c(1,2,3,4,5,6,7)
+PAE_otu_col <-8:172 
+view(PAE_otu_col)
+
+#Day 38
+
+PAE_Day38 <- Day38_only_asv[,-ncol(Day38_only_asv)]
+PAE_meta_col <-c(1,2,3,4,5,6,7)
+PAE_otu_col <-8:172 
+view(PAE_otu_col)
+######### RICHNESS ######## 
+metadata$obs_richness = estimate_richness(otu_table1, split = TRUE, measures = c("Observed"))
+view(metadata)
+metadata$alpha <- diversity(otu, index = "shannon")
+
+
+
+########BETA DIVERSITY############
+library(vegan)
+day8_only = subset(metadata, Age=="P8")
+day22_only = subset(metadata, Age=="P22")
+day38_only = subset(metadata, Age=="P38")
+
+#### removing non numeric
+day8_otus <- day8_only[, -1]
+day22_otus <- day22_only[, -1]
+day38_otus <- day38_only[, -1]
+
+day8_otus$read_depth_noofftargets <- as.numeric(day8_otus$read_depth_noofftargets)
+day8_otus$read_depth_filtered <- as.numeric(day8_otus$read_depth_filtered)
+
+day22_otus$read_depth_noofftargets <- as.numeric(day22_otus$read_depth_noofftargets)
+day22_otus$read_depth_filtered <- as.numeric(day22_otus$read_depth_filtered)
+
+day38_otus$read_depth_noofftargets <- as.numeric(day38_otus$read_depth_noofftargets)
+day38_otus$read_depth_filtered <- as.numeric(day38_otus$read_depth_filtered)
+#####Further subsetting by Sex
+# Split day8_otus by sex
+day8_m <- subset(day8_otus, Sex == "male")
+#remove non numeric columns
+day8_m <- day8_m[, -c(which(names(day8_m) %in% c("Sex", "Age", "Group")))]
+
+day8_f <- subset(day8_otus, Sex == "female")
+day8_f <- day8_f[, -c(which(names(day8_f) %in% c("Sex", "Age", "Group")))]
+
+# Split day22_otus by sex
+day22_m <- subset(day22_otus, Sex == "male")
+day22_m <- day22_m[, -c(which(names(day22_m) %in% c("Sex", "Age", "Group")))]
+
+day22_f <- subset(day22_otus, Sex == "female")
+day22_f <- day22_f[, -c(which(names(day22_f) %in% c("Sex", "Age", "Group")))]
+
+# Split day38_otus by sex
+day38_m <- subset(day38_otus, Sex == "male")
+day38_m <- day38_m [, -c(which(names(day38_m) %in% c("Sex", "Age", "Group")))]
+
+day38_f <- subset(day38_otus, Sex == "female")
+day38_f <- day38_f[, -c(which(names(day38_f) %in% c("Sex", "Age", "Group")))]
+
+#######just Male and female differences not accounting for PAE and Control yet#######
+
+###Day 8 plot####
+
+# Calculate the Bray-Curtis dissimilarity between samples using the vegdist function
+# calculate the distance matrix
+dist_mat8 <- vegdist(rbind(day8_m, day8_f), method = "bray")
+
+nmds <- metaMDS(dist_mat8)
+
+# Create plot
+plot(nmds, type = "n", main = "Day 8 Treatment")
+points(nmds, col = c(rep("blue", nrow(day8_m)), rep("red", nrow(day8_f))))
+legend("topright", legend = c("Male", "Female"), col = c("blue", "red"), pch = 1)
+
+
+
+###Day 22 plot####
+
+dist_mat22 <- vegdist(rbind(day22_m, day22_f), method = "bray")
+
+nmds <- metaMDS(dist_mat22)
+
+# Create plot
+plot(nmds, type = "n", main = "Day 22 Treatment") 
+points(nmds, col = c(rep("blue", nrow(day8_m)), rep("red", nrow(day8_f)))) 
+legend("topright", legend = c("Male", "Female"), col = c("blue", "red"), pch = 1)
+
+###Day 38 plot####
+
+dist_mat38 <- vegdist(rbind(day38_m, day38_f), method = "bray")
+
+nmds <- metaMDS(dist_mat38)
+
+# Create plot
+plot(nmds, type = "n", main = "Day 38 Treatment")
+points(nmds, col = c(rep("blue", nrow(day8_m)), rep("red", nrow(day8_f))))
+legend("topright", legend = c("Male", "Female"), col = c("blue", "red"), pch = 1)
+
+
+
+
+###########Control vs PAE male v female #########
+#remove non numeric columns
+
+day8_m <- subset(day8_otus, Sex == "male")
+day8_m_PAE <- subset(day8_m, Group == "PAE")
+day8_m_Control <- subset(day8_m, Group == "Control")
+day8_m_PAE <- day8_m_PAE[, -c(which(names(day8_m_PAE) %in% c("Sex", "Age", "Group")))]
+day8_m_Control <- day8_m_Control[, -c(which(names(day8_m_Control) %in% c("Sex", "Age", "Group")))]
+
+day8_f <- subset(day8_otus, Sex == "female")
+day8_f_PAE <- subset(day8_f, Group == "PAE")
+day8_f_Control <- subset(day8_f, Group == "Control")
+day8_f_PAE <- day8_f_PAE[, -c(which(names(day8_f_PAE) %in% c("Sex", "Age", "Group")))]
+day8_f_Control <- day8_f_Control[, -c(which(names(day8_f_Control) %in% c("Sex", "Age", "Group")))]
+
+
+day8_all <- rbind(day8_f_Control, day8_f_PAE, day8_m_Control, day8_m_PAE)
+
+# Subset the distance matrix for each group
+dist_f_Control <- vegdist(day8_f_Control, method = "bray")
+dist_f_PAE <- vegdist(day8_f_PAE, method = "bray")
+dist_m_Control <- vegdist(day8_m_Control, method = "bray")
+dist_m_PAE <- vegdist(day8_m_PAE, method = "bray")
+
+set.seed(123) # for reproducibility
+
+day8_all <- day8_all[, !names(day8_all) %in% "obs_richness"]
+nmds <- metaMDS(day8_all, distance = "bray")
+
+df8 <- data.frame(NMDS1 = nmds$points[,1], NMDS2 = nmds$points[,2])
+df8$group <- c(rep("day8_f_Control", nrow(day8_f_Control)), 
+               rep("day8_f_PAE", nrow(day8_f_PAE)),
+               rep("day8_m_Control", nrow(day8_m_Control)),
+               rep("day8_m_PAE", nrow(day8_m_PAE)))[1:nrow(df8)]
+ggplot(df8, aes(x = NMDS1, y = NMDS2, color = group)) +
+  geom_point() +
+  ggtitle("Day 8 Treatment") +
+  theme(plot.title = element_text(size = 20, face = "bold"))
+
+
+
+
+
+# Split day22_otus by sex
+day22_m <- subset(day22_otus, Sex == "male")
+day22_m_PAE <- subset(day22_m, Group == "PAE")
+day22_m_Control <- subset(day22_m, Group == "Control")
+day22_m_PAE <- day22_m_PAE[, -c(which(names(day22_m_PAE) %in% c("Sex", "Age", "Group")))]
+day22_m_Control <- day22_m_Control[, -c(which(names(day22_m_Control) %in% c("Sex", "Age", "Group")))]
+
+day22_f <- subset(day22_otus, Sex == "female")
+day22_f_PAE <- subset(day22_f, Group == "PAE")
+day22_f_Control <- subset(day22_f, Group == "Control")
+day22_f_PAE <- day22_f_PAE[, -c(which(names(day22_f_PAE) %in% c("Sex", "Age", "Group")))]
+day22_f_Control <- day22_f_Control[, -c(which(names(day22_f_Control) %in% c("Sex", "Age", "Group")))]
+
+
+day22_all <- rbind(day22_f_Control, day22_f_PAE, day22_m_Control, day22_m_PAE)
+
+# Subset the distance matrix for each group
+dist_f_Control <- vegdist(day22_f_Control, method = "bray")
+dist_f_PAE <- vegdist(day22_f_PAE, method = "bray")
+dist_m_Control <- vegdist(day22_m_Control, method = "bray")
+dist_m_PAE <- vegdist(day22_m_PAE, method = "bray")
+
+set.seed(123) # for reproducibility
+
+day22_all <- day22_all[, !names(day22_all) %in% "obs_richness"]
+nmds <- metaMDS(day22_all, distance = "bray")
+
+df22 <- data.frame(NMDS1 = nmds$points[,1], NMDS2 = nmds$points[,2])
+df22$group <- c(rep("day22_f_Control", nrow(day22_f_Control)), 
+                rep("day22_f_PAE", nrow(day22_f_PAE)),
+                rep("day22_m_Control", nrow(day22_m_Control)),
+                rep("day22_m_PAE", nrow(day22_m_PAE)))[1:nrow(df22)]
+ggplot(df22, aes(x = NMDS1, y = NMDS2, color = group)) +
+  geom_point() +
+  ggtitle("Day 22 Treatment") +
+  theme(plot.title = element_text(size = 20, face = "bold"))
+
+
+
+
+
+
+# Split day38_otus by sex
+day38_m <- subset(day38_otus, Sex == "male")
+day38_m_PAE <- subset(day38_m, Group == "PAE")
+day38_m_Control <- subset(day38_m, Group == "Control")
+day38_m_PAE <- day38_m_PAE[, -c(which(names(day38_m_PAE) %in% c("Sex", "Age", "Group")))]
+day38_m_Control <- day38_m_Control[, -c(which(names(day38_m_Control) %in% c("Sex", "Age", "Group")))]
+
+day38_f <- subset(day38_otus, Sex == "female")
+day38_f_PAE <- subset(day38_f, Group == "PAE")
+day38_f_Control <- subset(day38_f, Group == "Control")
+day38_f_PAE <- day38_f_PAE[, -c(which(names(day38_f_PAE) %in% c("Sex", "Age", "Group")))]
+day38_f_Control <- day38_f_Control[, -c(which(names(day38_f_Control) %in% c("Sex", "Age", "Group")))]
+
+# Combine the four subsets into one data frame
+day38_all <- rbind(day38_f_Control, day38_f_PAE, day38_m_Control, day38_m_PAE)
+
+# Subset the distance matrix for each group
+dist_f_Control <- vegdist(day38_f_Control, method = "bray")
+dist_f_PAE <- vegdist(day38_f_PAE, method = "bray")
+dist_m_Control <- vegdist(day38_m_Control, method = "bray")
+dist_m_PAE <- vegdist(day38_m_PAE, method = "bray")
+
+set.seed(123) # for reproducibility
+
+day38_all <- day38_all[, !names(day38_all) %in% "obs_richness"]
+nmds <- metaMDS(day38_all, distance = "bray")
+
+df38 <- data.frame(NMDS1 = nmds$points[,1], NMDS2 = nmds$points[,2])
+df38$group <- c(rep("day38_f_Control", nrow(day38_f_Control)), 
+                rep("day38_f_PAE", nrow(day38_f_PAE)),
+                rep("day38_m_Control", nrow(day38_m_Control)),
+                rep("day38_m_PAE", nrow(day38_m_PAE)))
+ggplot(df38, aes(x = NMDS1, y = NMDS2, color = group)) +
+  geom_point() +
+  ggtitle("Day 38 Treatment") +
+  theme(plot.title = element_text(size = 20, face = "bold"))
